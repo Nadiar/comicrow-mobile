@@ -41,30 +41,22 @@ final opdsClientProvider = Provider<OpdsClient>((ref) {
 });
 
 final addServerControllerProvider =
-    StateNotifierProvider.autoDispose<AddServerController, AddServerState>((ref) {
-  final opdsClient = ref.watch(opdsClientProvider);
-  final repository = ref.watch(serverRepositoryProvider);
-  final preferences = ref.watch(appPreferencesProvider.notifier);
-  return AddServerController(
-    opdsClient: opdsClient,
-    repository: repository,
-    setActiveServerId: preferences.setActiveServerId,
-  );
-});
+    NotifierProvider.autoDispose<AddServerController, AddServerState>(
+      AddServerController.new,
+    );
 
-class AddServerController extends StateNotifier<AddServerState> {
-  AddServerController({
-    required OpdsClient opdsClient,
-    required ServerRepository repository,
-      required Future<void> Function(int?) setActiveServerId,
-  }) : _opdsClient = opdsClient,
-       _repository = repository,
-      _setActiveServerId = setActiveServerId,
-       super(const AddServerState());
+class AddServerController extends Notifier<AddServerState> {
+  late final OpdsClient _opdsClient;
+  late final ServerRepository _repository;
+  late final Future<void> Function(int?) _setActiveServerId;
 
-  final OpdsClient _opdsClient;
-  final ServerRepository _repository;
-    final Future<void> Function(int?) _setActiveServerId;
+  @override
+  AddServerState build() {
+    _opdsClient = ref.watch(opdsClientProvider);
+    _repository = ref.watch(serverRepositoryProvider);
+    _setActiveServerId = ref.watch(appPreferencesProvider.notifier).setActiveServerId;
+    return const AddServerState();
+  }
 
   Future<void> testConnection({
     required String name,

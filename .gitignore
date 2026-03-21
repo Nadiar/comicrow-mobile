@@ -19,6 +19,8 @@ build/
 # Platform generated artifacts
 android/.gradle/
 android/local.properties
+android/key.properties
+android/*.jks
 ios/Flutter/ephemeral/
 ios/Flutter/Generated.xcconfig
 ios/Flutter/flutter_export_environment.sh

@@ -13,6 +13,10 @@ void main() {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
+    // Trigger build and let the _load() microtask complete
+    container.read(appPreferencesProvider);
+    await Future<void>.delayed(Duration.zero);
+
     await container.read(appPreferencesProvider.notifier).setThemeMode(
       ThemeMode.dark,
     );
@@ -26,6 +30,9 @@ void main() {
   test('persists reading direction and cache size', () async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
+
+    container.read(appPreferencesProvider);
+    await Future<void>.delayed(Duration.zero);
 
     await container.read(appPreferencesProvider.notifier).setReadingDirection(
       ReadingDirectionPreference.rtl,
@@ -44,6 +51,9 @@ void main() {
   test('persists auto double-page preference', () async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
+
+    container.read(appPreferencesProvider);
+    await Future<void>.delayed(Duration.zero);
 
     await container.read(appPreferencesProvider.notifier).setAutoDoublePage(true);
 

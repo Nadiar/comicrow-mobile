@@ -56,27 +56,32 @@ class FakeComicDownloader implements ComicDownloader {
 }
 
 /// A minimal [LibraryBrowseController] for widget/integration tests.
-class FakeLibraryBrowseController
-    extends StateNotifier<AsyncValue<LibraryBrowseState>>
-    implements LibraryBrowseController {
+class FakeLibraryBrowseController extends LibraryBrowseController {
   FakeLibraryBrowseController({
     List<OpdsEntry> entries = const [],
     String serverName = 'Main Library',
-  }) : super(
-         AsyncValue.data(
-           LibraryBrowseState(
-             feed: OpdsFeed(
-               version: OpdsVersion.opds2,
-               title: 'Catalog',
-               entries: entries,
-             ),
-             currentUri: Uri.parse('https://example.com/opds'),
-             canGoBack: false,
-             serverId: 1,
-             serverName: serverName,
-           ),
-         ),
-       );
+  })  : _entries = entries,
+        _serverName = serverName;
+
+  final List<OpdsEntry> _entries;
+  final String _serverName;
+
+  @override
+  AsyncValue<LibraryBrowseState> build() {
+    return AsyncValue.data(
+      LibraryBrowseState(
+        feed: OpdsFeed(
+          version: OpdsVersion.opds2,
+          title: 'Catalog',
+          entries: _entries,
+        ),
+        currentUri: Uri.parse('https://example.com/opds'),
+        canGoBack: false,
+        serverId: 1,
+        serverName: _serverName,
+      ),
+    );
+  }
 
   @override
   Future<void> goBack() async {}

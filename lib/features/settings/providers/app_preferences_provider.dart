@@ -4,9 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 final appPreferencesProvider =
-    StateNotifierProvider<AppPreferencesController, AppPreferencesState>((ref) {
-      return AppPreferencesController();
-    });
+    NotifierProvider<AppPreferencesController, AppPreferencesState>(
+      AppPreferencesController.new,
+    );
 
 final preferredReadingDirectionProvider = Provider<ReadingDirectionPreference>(
   (ref) => ref.watch(appPreferencesProvider).readingDirection,
@@ -67,9 +67,11 @@ class AppPreferencesState {
   }
 }
 
-class AppPreferencesController extends StateNotifier<AppPreferencesState> {
-  AppPreferencesController() : super(const AppPreferencesState()) {
-    _load();
+class AppPreferencesController extends Notifier<AppPreferencesState> {
+  @override
+  AppPreferencesState build() {
+    Future.microtask(_load);
+    return const AppPreferencesState();
   }
 
   static const String _themeModeKey = 'prefs.theme_mode';

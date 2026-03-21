@@ -2,6 +2,8 @@ import 'package:comicrow/core/opds/opds_client.dart';
 import 'package:comicrow/core/storage/database.dart';
 import 'package:comicrow/features/servers/data/server_repository.dart';
 import 'package:comicrow/features/servers/providers/add_server_controller.dart';
+import 'package:comicrow/features/settings/providers/app_preferences_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -28,51 +30,60 @@ void main() {
   late _MockServerRepository mockRepository;
   late List<int?> selectedServerIds;
 
-  Future<void> setActiveServerId(int? serverId) async {
-    selectedServerIds.add(serverId);
-  }
-
   setUp(() {
     mockRepository = _MockServerRepository();
     selectedServerIds = <int?>[];
   });
 
+  ProviderContainer buildContainer(OpdsVersion version) {
+    return ProviderContainer(
+      overrides: [
+        opdsClientProvider.overrideWithValue(_FakeOpdsClient(version)),
+        serverRepositoryProvider.overrideWithValue(mockRepository),
+        appPreferencesProvider.overrideWith(() {
+          final controller = _TrackingAppPreferencesController(selectedServerIds);
+          return controller;
+        }),
+      ],
+    );
+  }
+
   group('AddServerController.testConnection', () {
     test('fails validation when required fields are missing', () async {
-      final controller = AddServerController(
-        opdsClient: _FakeOpdsClient(OpdsVersion.opds2),
-        repository: mockRepository,
-        setActiveServerId: setActiveServerId,
-      );
+      final container = buildContainer(OpdsVersion.opds2);
+      addTearDown(container.dispose);
 
-      await controller.testConnection(
-        name: '',
-        url: '',
-        username: null,
-        password: null,
-      );
+      await container
+          .read(addServerControllerProvider.notifier)
+          .testConnection(
+            name: '',
+            url: '',
+            username: null,
+            password: null,
+          );
 
-      expect(controller.state.status, AddServerStatus.failure);
-      expect(controller.state.errorMessage, contains('required'));
+      final state = container.read(addServerControllerProvider);
+      expect(state.status, AddServerStatus.failure);
+      expect(state.errorMessage, contains('required'));
     });
 
     test('sets success status and detected version for valid input', () async {
-      final controller = AddServerController(
-        opdsClient: _FakeOpdsClient(OpdsVersion.opds1),
-        repository: mockRepository,
-        setActiveServerId: setActiveServerId,
-      );
+      final container = buildContainer(OpdsVersion.opds1);
+      addTearDown(container.dispose);
 
-      await controller.testConnection(
-        name: 'Local Server',
-        url: 'https://example.com/opds',
-        username: 'user',
-        password: 'pass',
-      );
+      await container
+          .read(addServerControllerProvider.notifier)
+          .testConnection(
+            name: 'Local Server',
+            url: 'https://example.com/opds',
+            username: 'user',
+            password: 'pass',
+          );
 
-      expect(controller.state.status, AddServerStatus.success);
-      expect(controller.state.detectedVersion, OpdsVersion.opds1);
-      expect(controller.state.errorMessage, isNull);
+      final state = container.read(addServerControllerProvider);
+      expect(state.status, AddServerStatus.success);
+      expect(state.detectedVersion, OpdsVersion.opds1);
+      expect(state.errorMessage, isNull);
     });
   });
 
@@ -99,28 +110,28 @@ void main() {
         ),
       ).thenAnswer((_) async => fakeRecord);
 
-      final controller = AddServerController(
-        opdsClient: _FakeOpdsClient(OpdsVersion.opds1),
-        repository: mockRepository,
-        setActiveServerId: setActiveServerId,
-      );
+      final container = buildContainer(OpdsVersion.opds1);
+      addTearDown(container.dispose);
+
+      final notifier = container.read(addServerControllerProvider.notifier);
 
       // Simulate a successful test connection first
-      await controller.testConnection(
+      await notifier.testConnection(
         name: 'Local Server',
         url: 'https://example.com/opds',
         username: 'user',
         password: 'pass',
       );
 
-      await controller.saveServer(
+      await notifier.saveServer(
         name: 'Local Server',
         url: 'https://example.com/opds',
         username: 'user',
         password: 'pass',
       );
 
-      expect(controller.state.status, AddServerStatus.saved);
+      final state = container.read(addServerControllerProvider);
+      expect(state.status, AddServerStatus.saved);
       expect(selectedServerIds, equals([1]));
     });
 
@@ -135,29 +146,47 @@ void main() {
         ),
       ).thenThrow(Exception('DB error'));
 
-      final controller = AddServerController(
-        opdsClient: _FakeOpdsClient(OpdsVersion.opds1),
-        repository: mockRepository,
-        setActiveServerId: setActiveServerId,
-      );
+      final container = buildContainer(OpdsVersion.opds1);
+      addTearDown(container.dispose);
 
-      await controller.testConnection(
+      final notifier = container.read(addServerControllerProvider.notifier);
+
+      await notifier.testConnection(
         name: 'Local Server',
         url: 'https://example.com/opds',
         username: null,
         password: null,
       );
 
-      await controller.saveServer(
+      await notifier.saveServer(
         name: 'Local Server',
         url: 'https://example.com/opds',
         username: null,
         password: null,
       );
 
-      expect(controller.state.status, AddServerStatus.failure);
-      expect(controller.state.errorMessage, contains('save'));
+      final state = container.read(addServerControllerProvider);
+      expect(state.status, AddServerStatus.failure);
+      expect(state.errorMessage, contains('save'));
       expect(selectedServerIds, isEmpty);
     });
   });
+}
+
+/// An [AppPreferencesController] override that records calls to [setActiveServerId].
+class _TrackingAppPreferencesController extends AppPreferencesController {
+  _TrackingAppPreferencesController(this._ids);
+
+  final List<int?> _ids;
+
+  @override
+  AppPreferencesState build() {
+    // Skip SharedPreferences loading in tests.
+    return const AppPreferencesState();
+  }
+
+  @override
+  Future<void> setActiveServerId(int? serverId) async {
+    _ids.add(serverId);
+  }
 }

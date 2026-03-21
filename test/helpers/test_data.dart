@@ -21,5 +21,5 @@ List<int> buildTestZip(List<String> names, {Uint8List? imageBytes}) {
   for (final name in names) {
     archive.addFile(ArchiveFile(name, bytes.length, bytes));
   }
-  return ZipEncoder().encode(archive)!;
+  return ZipEncoder().encode(archive);
 }
