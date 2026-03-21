@@ -78,12 +78,23 @@ jobs:
         id: tag
         run: |
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+            TAG="${GITHUB_REF#refs/tags/}"
+            echo "TAG_NAME=$TAG" >> "$GITHUB_OUTPUT"
             echo "IS_TAG=true" >> "$GITHUB_OUTPUT"
           else
-            echo "TAG_NAME=manual-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+            TAG="manual-$(git rev-parse --short HEAD)"
+            echo "TAG_NAME=$TAG" >> "$GITHUB_OUTPUT"
             echo "IS_TAG=false" >> "$GITHUB_OUTPUT"
           fi
+          cp build/app/outputs/apk/release/app-release.apk "build/app/outputs/apk/release/comicrow-${TAG}.apk"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: comicrow-${{ steps.tag.outputs.TAG_NAME }}
+          path: |
+            build/app/outputs/apk/release/comicrow-${{ steps.tag.outputs.TAG_NAME }}.apk
+            build/app/outputs/bundle/release/app-release.aab
 
       - name: Upload AAB to Google Play Store
         continue-on-error: true
@@ -100,7 +111,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            build/app/outputs/apk/release/app-release.apk
+            build/app/outputs/apk/release/comicrow-${{ steps.tag.outputs.TAG_NAME }}.apk
           tag_name: ${{ steps.tag.outputs.TAG_NAME }}
           generate_release_notes: true
           draft: false
