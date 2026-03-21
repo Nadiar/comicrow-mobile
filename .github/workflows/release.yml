@@ -1,22 +1,16 @@
 name: Release Build
 
 on:
-  workflow_dispatch:
-    inputs:
-      target_ref:
-        description: Git ref to build, such as refs/tags/pr-1-latest
-        required: false
-        type: string
-      play_track:
-        description: Google Play track to upload to
-        required: false
-        default: internal
-        type: string
   push:
     tags:
       - 'v*'
-      - 'release-*'
-      - 'pr-*-latest'
+  workflow_dispatch:
+    inputs:
+      play_track:
+        description: Google Play track (internal, alpha, beta, production)
+        required: false
+        default: internal
+        type: string
 
 permissions:
   contents: write
@@ -31,7 +25,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ inputs.target_ref != '' && inputs.target_ref || github.ref }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -46,10 +45,10 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          test -n "$ANDROID_KEYSTORE_BASE64" || { echo "Missing ANDROID_KEYSTORE_BASE64"; exit 1; }
-          test -n "$ANDROID_KEYSTORE_PASSWORD" || { echo "Missing ANDROID_KEYSTORE_PASSWORD"; exit 1; }
-          test -n "$ANDROID_KEY_ALIAS" || { echo "Missing ANDROID_KEY_ALIAS"; exit 1; }
-          test -n "$ANDROID_KEY_PASSWORD" || { echo "Missing ANDROID_KEY_PASSWORD"; exit 1; }
+          test -n "$ANDROID_KEYSTORE_BASE64" || { echo "::error::Missing ANDROID_KEYSTORE_BASE64 secret"; exit 1; }
+          test -n "$ANDROID_KEYSTORE_PASSWORD" || { echo "::error::Missing ANDROID_KEYSTORE_PASSWORD secret"; exit 1; }
+          test -n "$ANDROID_KEY_ALIAS" || { echo "::error::Missing ANDROID_KEY_ALIAS secret"; exit 1; }
+          test -n "$ANDROID_KEY_PASSWORD" || { echo "::error::Missing ANDROID_KEY_PASSWORD secret"; exit 1; }
 
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
 
@@ -63,6 +62,9 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Analyze
+        run: flutter analyze
+
       - name: Run tests
         run: flutter test
 
@@ -72,30 +74,34 @@ jobs:
       - name: Build AAB (App Bundle)
         run: flutter build appbundle --release
 
-      - name: Get tag name
+      - name: Determine tag name
         id: tag
-        env:
-          TARGET_REF: ${{ inputs.target_ref }}
         run: |
-          EFFECTIVE_REF="${TARGET_REF:-$GITHUB_REF}"
-          echo "TAG_NAME=${EFFECTIVE_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+            echo "IS_TAG=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "TAG_NAME=manual-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+            echo "IS_TAG=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Upload to Google Play Store
+      - name: Upload AAB to Google Play Store
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}
           packageName: com.nadiar.comicrow
           releaseFiles: build/app/outputs/bundle/release/app-release.aab
-          track: ${{ inputs.play_track != '' && inputs.play_track || 'internal' }}
-          status: inProgress
+          track: ${{ inputs.play_track || 'internal' }}
+          status: completed
 
       - name: Create GitHub Release
+        if: steps.tag.outputs.IS_TAG == 'true'
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/release-')
         with:
           files: |
             build/app/outputs/apk/release/app-release.apk
           tag_name: ${{ steps.tag.outputs.TAG_NAME }}
+          generate_release_notes: true
           draft: false
           prerelease: false
         env:
