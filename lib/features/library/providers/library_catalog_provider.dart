@@ -10,16 +10,9 @@ import '../../servers/providers/add_server_controller.dart';
 import '../../settings/providers/app_preferences_provider.dart';
 
 final libraryBrowseControllerProvider =
-    StateNotifierProvider.autoDispose<LibraryBrowseController, AsyncValue<LibraryBrowseState>>((ref) {
-      final repository = ref.watch(serverRepositoryProvider);
-      final client = ref.watch(opdsClientProvider);
-      final activeServerId = ref.watch(activeLibraryServerIdProvider);
-      return LibraryBrowseController(
-        repository: repository,
-        client: client,
-        activeServerId: activeServerId,
-      );
-    });
+    NotifierProvider.autoDispose<LibraryBrowseController, AsyncValue<LibraryBrowseState>>(
+      LibraryBrowseController.new,
+    );
 
 class LibraryBrowseState {
   const LibraryBrowseState({
@@ -64,26 +57,24 @@ class LibraryBrowseState {
   }
 }
 
-class LibraryBrowseController extends StateNotifier<AsyncValue<LibraryBrowseState>> {
-  LibraryBrowseController({
-    required ServerRepository repository,
-    required OpdsClient client,
-    int? activeServerId,
-  }) : _repository = repository,
-       _client = client,
-       _activeServerId = activeServerId,
-       super(const AsyncValue.loading()) {
-    _initialize();
-  }
-
-  final ServerRepository _repository;
-  final OpdsClient _client;
-  final int? _activeServerId;
+class LibraryBrowseController extends Notifier<AsyncValue<LibraryBrowseState>> {
+  late final ServerRepository _repository;
+  late final OpdsClient _client;
+  late final int? _activeServerId;
   final List<Uri> _history = <Uri>[];
   Uri? _rootUri;
 
   ServerRecord? _server;
   String? _password;
+
+  @override
+  AsyncValue<LibraryBrowseState> build() {
+    _repository = ref.watch(serverRepositoryProvider);
+    _client = ref.watch(opdsClientProvider);
+    _activeServerId = ref.watch(activeLibraryServerIdProvider);
+    Future.microtask(_initialize);
+    return const AsyncValue.loading();
+  }
 
   Future<void> _initialize() async {
     try {
@@ -102,9 +93,7 @@ class LibraryBrowseController extends StateNotifier<AsyncValue<LibraryBrowseStat
       final rootUri = Uri.parse(_server!.url);
       _rootUri = rootUri;
       final feed = await _fetchFeed(rootUri);
-      if (!mounted) {
-        return;
-      }
+      if (!ref.mounted) return;
       state = AsyncValue.data(
         LibraryBrowseState(
           feed: feed,
@@ -116,9 +105,7 @@ class LibraryBrowseController extends StateNotifier<AsyncValue<LibraryBrowseStat
         ),
       );
     } catch (error, stackTrace) {
-      if (!mounted) {
-        return;
-      }
+      if (!ref.mounted) return;
       state = AsyncValue.error(error, stackTrace);
     }
   }
@@ -128,7 +115,7 @@ class LibraryBrowseController extends StateNotifier<AsyncValue<LibraryBrowseStat
       return;
     }
 
-    final currentState = state.valueOrNull;
+    final currentState = state.value;
     if (currentState == null || _server == null) {
       return;
     }
@@ -157,7 +144,7 @@ class LibraryBrowseController extends StateNotifier<AsyncValue<LibraryBrowseStat
       return;
     }
 
-    final currentState = state.valueOrNull;
+    final currentState = state.value;
     if (currentState == null) {
       return;
     }
@@ -183,7 +170,7 @@ class LibraryBrowseController extends StateNotifier<AsyncValue<LibraryBrowseStat
   }
 
   Future<void> loadNextPage() async {
-    final currentState = state.valueOrNull;
+    final currentState = state.value;
     if (currentState == null || currentState.feed.nextHref == null) {
       return;
     }
@@ -208,7 +195,7 @@ class LibraryBrowseController extends StateNotifier<AsyncValue<LibraryBrowseStat
   }
 
   Future<void> refresh() async {
-    final currentState = state.valueOrNull;
+    final currentState = state.value;
     if (currentState == null || _server == null) {
       return;
     }
@@ -234,7 +221,7 @@ class LibraryBrowseController extends StateNotifier<AsyncValue<LibraryBrowseStat
       return;
     }
 
-    final currentState = state.valueOrNull;
+    final currentState = state.value;
     if (currentState == null || _server == null) {
       return;
     }
@@ -270,7 +257,7 @@ class LibraryBrowseController extends StateNotifier<AsyncValue<LibraryBrowseStat
 
   Future<void> clearSearch() async {
     final rootUri = _rootUri;
-    final currentState = state.valueOrNull;
+    final currentState = state.value;
     if (rootUri == null || currentState == null) {
       return;
     }
@@ -317,7 +304,7 @@ class LibraryBrowseController extends StateNotifier<AsyncValue<LibraryBrowseStat
   }
 
   Uri resolvePublicationUri(OpdsEntry entry) {
-    final currentState = state.valueOrNull;
+    final currentState = state.value;
     if (entry.kind != OpdsEntryKind.publication || currentState == null) {
       throw const LibraryCatalogException('Cannot open publication from current state.');
     }

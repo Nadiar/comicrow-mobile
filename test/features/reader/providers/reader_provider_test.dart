@@ -220,7 +220,7 @@ void main() {
           Uint8List.fromList([1, 2, 3, 4, 5]),
         ),
       );
-      final zipBytes = ZipEncoder().encode(archive)!;
+      final zipBytes = ZipEncoder().encode(archive);
 
       final container = buildContainer(zipBytes);
       addTearDown(container.dispose);

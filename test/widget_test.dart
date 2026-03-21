@@ -31,7 +31,7 @@ void main() {
           serverCountProvider.overrideWith((_) => Stream.value(1)),
           savedServersProvider.overrideWith((_) => Stream.value([server])),
           libraryBrowseControllerProvider.overrideWith(
-            (ref) => FakeLibraryBrowseController(
+            () => FakeLibraryBrowseController(
               entries: const [
                 OpdsEntry(
                   title: 'Demo',

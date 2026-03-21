@@ -30,7 +30,7 @@ void main() {
           serverCountProvider.overrideWith((ref) => Stream.value(1)),
           savedServersProvider.overrideWith((ref) => Stream.value([server])),
           libraryBrowseControllerProvider.overrideWith(
-            (ref) => FakeLibraryBrowseController(),
+            FakeLibraryBrowseController.new,
           ),
         ],
         child: const ComicRowApp(),

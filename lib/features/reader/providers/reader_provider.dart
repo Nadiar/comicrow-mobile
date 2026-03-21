@@ -51,25 +51,9 @@ class ReaderRequest {
   );
 }
 
-final readerControllerProvider = StateNotifierProvider.autoDispose
+final readerControllerProvider = NotifierProvider.autoDispose
     .family<ReaderController, AsyncValue<ReaderState>, ReaderRequest>(
-  (ref, request) {
-    return ReaderController(
-      request: request,
-      repository: ref.watch(serverRepositoryProvider),
-      downloader: ref.watch(comicDownloaderProvider),
-      progressRepository: ref.watch(readProgressRepositoryProvider),
-      downloadRepository: ref.watch(downloadRepositoryProvider),
-      pageCacheManager: ref.watch(pageCacheManagerProvider),
-      pseClient: ref.watch(pseClientProvider),
-      divinaClient: ref.watch(divinaClientProvider),
-      defaultDirection: ref.watch(preferredReadingDirectionProvider) ==
-              ReadingDirectionPreference.rtl
-          ? ReaderDirection.rtl
-          : ReaderDirection.ltr,
-      serverReadingDirections: ref.watch(serverReadingDirectionsProvider),
-    );
-  },
+  ReaderController.new,
 );
 
 enum ReaderDirection { ltr, rtl }
@@ -141,41 +125,38 @@ class ReaderState {
   }
 }
 
-class ReaderController extends StateNotifier<AsyncValue<ReaderState>> {
-  ReaderController({
-    required this.request,
-    required ServerRepository repository,
-    required ComicDownloader downloader,
-    required ReadProgressRepository progressRepository,
-    required DownloadRepository downloadRepository,
-    required PageCacheManager pageCacheManager,
-    required PseClient pseClient,
-    required DivinaClient divinaClient,
-    required ReaderDirection defaultDirection,
-    required Map<int, ReadingDirectionPreference> serverReadingDirections,
-  })  : _repository = repository,
-        _downloader = downloader,
-        _progressRepository = progressRepository,
-        _downloadRepository = downloadRepository,
-      _pageCacheManager = pageCacheManager,
-        _pseClient = pseClient,
-        _divinaClient = divinaClient,
-        _defaultDirection = defaultDirection,
-        _serverReadingDirections = serverReadingDirections,
-        super(const AsyncValue.loading()) {
-    _load();
-  }
+class ReaderController extends Notifier<AsyncValue<ReaderState>> {
+  ReaderController(this.request);
 
   final ReaderRequest request;
-  final ServerRepository _repository;
-  final ComicDownloader _downloader;
-  final ReadProgressRepository _progressRepository;
-  final DownloadRepository _downloadRepository;
-  final PageCacheManager _pageCacheManager;
-  final PseClient _pseClient;
-  final DivinaClient _divinaClient;
-  final ReaderDirection _defaultDirection;
-  final Map<int, ReadingDirectionPreference> _serverReadingDirections;
+  late ServerRepository _repository;
+  late ComicDownloader _downloader;
+  late ReadProgressRepository _progressRepository;
+  late DownloadRepository _downloadRepository;
+  late PageCacheManager _pageCacheManager;
+  late PseClient _pseClient;
+  late DivinaClient _divinaClient;
+  late ReaderDirection _defaultDirection;
+  late Map<int, ReadingDirectionPreference> _serverReadingDirections;
+
+  @override
+  AsyncValue<ReaderState> build() {
+    _repository = ref.watch(serverRepositoryProvider);
+    _downloader = ref.watch(comicDownloaderProvider);
+    _progressRepository = ref.watch(readProgressRepositoryProvider);
+    _downloadRepository = ref.watch(downloadRepositoryProvider);
+    _pageCacheManager = ref.watch(pageCacheManagerProvider);
+    _pseClient = ref.watch(pseClientProvider);
+    _divinaClient = ref.watch(divinaClientProvider);
+    _defaultDirection =
+        ref.watch(preferredReadingDirectionProvider) ==
+                ReadingDirectionPreference.rtl
+            ? ReaderDirection.rtl
+            : ReaderDirection.ltr;
+    _serverReadingDirections = ref.watch(serverReadingDirectionsProvider);
+    Future.microtask(_load);
+    return const AsyncValue.loading();
+  }
 
   int? _serverId;
   final Set<String> _prefetchInFlight = <String>{};
@@ -217,10 +198,6 @@ class ReaderController extends StateNotifier<AsyncValue<ReaderState>> {
       final pageCount = streamingPageUrls?.length ?? pages.length;
       final clampedPage = savedPage == null ? 0 : savedPage.clamp(0, pageCount - 1);
 
-      if (!mounted) {
-        return;
-      }
-
       final serverDirection = _serverReadingDirections[server.id] ==
               ReadingDirectionPreference.rtl
           ? ReaderDirection.rtl
@@ -243,9 +220,6 @@ class ReaderController extends StateNotifier<AsyncValue<ReaderState>> {
 
       _prefetchAround(clampedPage);
     } catch (error, stackTrace) {
-      if (!mounted) {
-        return;
-      }
       state = AsyncValue.error(error, stackTrace);
     }
   }
@@ -409,7 +383,7 @@ class ReaderController extends StateNotifier<AsyncValue<ReaderState>> {
 
 
   void setDisplayPage(int displayIndex) {
-    final current = state.valueOrNull;
+    final current = state.value;
     if (current == null || displayIndex < 0 || displayIndex >= current.pageCount) {
       return;
     }
@@ -420,7 +394,7 @@ class ReaderController extends StateNotifier<AsyncValue<ReaderState>> {
   }
 
   void setPage(int index) {
-    final current = state.valueOrNull;
+    final current = state.value;
     if (current == null || index < 0 || index >= current.pageCount) {
       return;
     }
@@ -429,7 +403,7 @@ class ReaderController extends StateNotifier<AsyncValue<ReaderState>> {
   }
 
   void _prefetchAround(int index) {
-    final current = state.valueOrNull;
+    final current = state.value;
     if (current == null || !current.isStreaming || current.streamingPageUrls.isEmpty) {
       return;
     }
@@ -504,7 +478,7 @@ class ReaderController extends StateNotifier<AsyncValue<ReaderState>> {
   }
 
   void toggleDirection() {
-    final current = state.valueOrNull;
+    final current = state.value;
     if (current == null) {
       return;
     }
@@ -517,7 +491,7 @@ class ReaderController extends StateNotifier<AsyncValue<ReaderState>> {
   }
 
   void setReadingMode(ReaderMode mode) {
-    final current = state.valueOrNull;
+    final current = state.value;
     if (current == null || current.readingMode == mode) {
       return;
     }
