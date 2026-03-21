@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
   pull-requests: read
 
 jobs:
@@ -45,11 +46,24 @@ jobs:
 
       - name: Create or move preview tag
         if: steps.pr.outputs.number != ''
+        id: preview
         env:
           PR_NUMBER: ${{ steps.pr.outputs.number }}
         run: |
           TAG_NAME="pr-${PR_NUMBER}-latest"
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -fa "$TAG_NAME" -m "Preview tag for PR #${PR_NUMBER}"
           git push origin "$TAG_NAME" --force
+
+      - name: Trigger preview release build
+        if: steps.preview.outputs.tag_name != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ steps.preview.outputs.tag_name }}
+        run: |
+          gh workflow run release.yml \
+            --ref development \
+            --field target_ref="refs/tags/${TAG_NAME}" \
+            --field play_track="internal"
