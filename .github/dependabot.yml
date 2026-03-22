@@ -1,0 +1,21 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "ci"
+
+  - package-ecosystem: pub
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(deps)"
+    ignore:
+      # Blocked by riverpod_generator <-> drift_dev analyzer conflict
+      - dependency-name: drift
+        versions: [">=2.32.0"]
+      - dependency-name: drift_dev
+        versions: [">=2.32.0"]
