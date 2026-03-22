@@ -97,7 +97,7 @@ jobs:
 
       - name: Create GitHub Release
         if: steps.tag.outputs.IS_TAG == 'true'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             build/app/outputs/apk/release/app-release.apk
