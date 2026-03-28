@@ -19,3 +19,14 @@ updates:
         versions: [">=2.32.0"]
       - dependency-name: drift_dev
         versions: [">=2.32.0"]
+
+automerged_updates:
+  - match:
+      dependency_type: "all"
+      update_type: "version-update:semver-patch"
+  - match:
+      dependency_type: "all"
+      update_type: "version-update:semver-minor"
+  - match:
+      dependency_type: "all"
+      update_type: "version-update:semver-major"

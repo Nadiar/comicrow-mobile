@@ -1,0 +1,25 @@
+name: Dependabot Auto-Merge
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+
+jobs:
+  enable-automerge:
+    if: "github.event.pull_request.user.login == 'dependabot[bot]' || github.event.pull_request.user.login == 'dependabot'"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Enable auto-merge for Dependabot PR
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ github.event.pull_request.number }}
+          merge-method: squash
+          required-approving-review-count: 0
+      - name: Add @dependabot-merge label (for trace)
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: "✅ Dependabot PR is now auto-merge enabled."
