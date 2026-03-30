@@ -26,3 +26,5 @@ ios/Flutter/Generated.xcconfig
 ios/Flutter/flutter_export_environment.sh
 apk/
 bundle/
+screenshots/
+android/fastlane/report.xml
