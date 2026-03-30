@@ -1,0 +1,14 @@
+ComicRow connects to your self-hosted OPDS comic server and lets you browse and read comics on your phone or tablet — no syncing or full downloads required. Pages stream on demand so you can start reading immediately.
+
+Features:
+
+• OPDS 1.2 and 2.0 catalog browsing with search
+• Streaming-first reading — pages load on demand via DiViNa manifests (OPDS 2.0) and PSE page streams (OPDS 1.2), with full archive download as a fallback
+• Three reading modes — single page, double-page spread, and vertical scroll
+• Per-server presets — set default reading mode and auto double-page in landscape per server
+• Offline support — download comics for reading without a connection
+• Read progress tracking — picks up where you left off
+• RTL and LTR reading direction support
+• Light, dark, and system theme options
+
+ComicRow is designed for self-hosted OPDS servers like ComicOPDS, Komga, Kavita, and others that expose comics via the OPDS standard.
