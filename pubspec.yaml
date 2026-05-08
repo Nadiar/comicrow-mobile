@@ -41,7 +41,7 @@ dependencies:
   cached_network_image: ^3.4.1
   xml: ^6.6.1
   archive: ^4.0.9
-  flutter_secure_storage: ^10.0.0
+  flutter_secure_storage: ^10.1.0
   path_provider: ^2.1.5
   photo_view: ^0.15.0
   shimmer: ^3.0.0
