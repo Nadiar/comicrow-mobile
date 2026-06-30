@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:xml/xml.dart';
 
 import '../../../core/network/auth.dart';
 
@@ -231,13 +232,24 @@ class LibraryBrowseController extends Notifier<AsyncValue<LibraryBrowseState>> {
       throw const LibraryCatalogException('Search is not available for this catalog.');
     }
 
-    final searchUri = _resolveSearchUri(
-      currentState.currentUri,
-      searchUrl,
-      trimmedQuery,
-    );
     state = const AsyncValue.loading();
     try {
+      var template = searchUrl;
+      final rawUri = currentState.currentUri.resolve(searchUrl);
+      
+      if (!searchUrl.contains('{searchTerms}') && !searchUrl.contains('{searchTerm}')) {
+        final fetchedTemplate = await _getSearchTemplate(rawUri);
+        if (fetchedTemplate != null) {
+          template = fetchedTemplate;
+        }
+      }
+
+      final searchUri = _resolveSearchUri(
+        currentState.currentUri,
+        template,
+        trimmedQuery,
+      );
+
       final searchFeed = await _client.fetchFeed(
         searchUri,
         username: _server?.username,
@@ -253,6 +265,45 @@ class LibraryBrowseController extends Notifier<AsyncValue<LibraryBrowseState>> {
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
     }
+  }
+
+  Future<String?> _getSearchTemplate(Uri searchUri) async {
+    try {
+      final response = await _client.fetchRaw(
+        searchUri,
+        username: _server?.username,
+        password: _password,
+      );
+      
+      final document = XmlDocument.parse(response.body);
+      final searchDesc = document.findElements('OpenSearchDescription').firstOrNull ??
+          document.findAllElements('OpenSearchDescription').firstOrNull;
+      if (searchDesc != null) {
+        final urls = searchDesc.findElements('Url');
+        for (final url in urls) {
+          final type = url.getAttribute('type') ?? '';
+          if (type.contains('application/atom+xml') ||
+              type.contains('application/opds+json') ||
+              type.contains('application/xml') ||
+              type.contains('text/xml')) {
+            final template = url.getAttribute('template');
+            if (template != null && template.isNotEmpty) {
+              return template;
+            }
+          }
+        }
+        final anyUrl = urls.firstOrNull;
+        if (anyUrl != null) {
+          final template = anyUrl.getAttribute('template');
+          if (template != null && template.isNotEmpty) {
+            return template;
+          }
+        }
+      }
+    } catch (e) {
+      // Log template parsing error silently or fallback
+    }
+    return null;
   }
 
   Future<void> clearSearch() async {
@@ -281,26 +332,26 @@ class LibraryBrowseController extends Notifier<AsyncValue<LibraryBrowseState>> {
 
   Uri _resolveSearchUri(Uri baseUri, String searchHref, String query) {
     final encodedQuery = Uri.encodeQueryComponent(query);
-    final href = searchHref
+    
+    var href = searchHref
+        .replaceAll('{searchTerms}', encodedQuery)
+        .replaceAll('{searchTerm}', encodedQuery)
         .replaceAll('{?searchTerms}', '?q=$encodedQuery')
-        .replaceAll('{searchTerms}', encodedQuery);
+        .replaceAll('{?searchTerm}', '?q=$encodedQuery');
 
-    if (href.contains('{') || href.contains('}')) {
-      throw const LibraryCatalogException('Unsupported search URI template.');
-    }
+    href = href.replaceAll(RegExp(r'\{[^\}]+\}'), '');
 
     final resolved = baseUri.resolve(href);
-    if (resolved.queryParameters.containsKey('q')) {
-      return resolved;
+    if (!searchHref.contains('{searchTerms}') && 
+        !searchHref.contains('{searchTerm}') && 
+        !resolved.queryParameters.containsKey('q') &&
+        !resolved.queryParameters.containsKey('query')) {
+      final parameters = Map<String, String>.from(resolved.queryParameters);
+      parameters['q'] = query;
+      return resolved.replace(queryParameters: parameters);
     }
 
-    if (href.contains('{?searchTerms}')) {
-      return resolved;
-    }
-
-    final parameters = Map<String, String>.from(resolved.queryParameters);
-    parameters['q'] = query;
-    return resolved.replace(queryParameters: parameters);
+    return resolved;
   }
 
   Uri resolvePublicationUri(OpdsEntry entry) {

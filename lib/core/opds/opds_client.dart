@@ -46,6 +46,26 @@ class OpdsClient {
     return _detectVersionFromResponse(response);
   }
 
+  Future<HttpTextResponse> fetchRaw(
+    Uri uri, {
+    String? username,
+    String? password,
+  }) async {
+    final response = await _transport.get(
+      uri,
+      username: username,
+      password: password,
+      headers: _acceptHeader,
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw OpdsConnectionException(
+        'Connection failed with status ${response.statusCode}.',
+      );
+    }
+    return response;
+  }
+
   Future<OpdsFeed> fetchFeed(
     Uri feedUri, {
     String? username,
