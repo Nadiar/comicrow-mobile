@@ -99,10 +99,14 @@ class _StreamingPageImageState extends ConsumerState<StreamingPageImage> {
     }
 
     const maxAttempts = 3;
+    final pageUri = Uri.parse(widget.pageUrl);
+
     for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (!mounted) return null;
+
       try {
         final bytes = await ref.read(comicDownloaderProvider).downloadBytesWithHeaders(
-          Uri.parse(widget.pageUrl),
+          pageUri,
           headers: widget.headers,
         );
         if (bytes.isNotEmpty) {
@@ -115,8 +119,7 @@ class _StreamingPageImageState extends ConsumerState<StreamingPageImage> {
       }
 
       if (attempt < maxAttempts) {
-        final delayMs = attempt * 1000;
-        await Future.delayed(Duration(milliseconds: delayMs));
+        await Future.delayed(Duration(seconds: attempt));
       }
     }
 
