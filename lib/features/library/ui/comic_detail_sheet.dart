@@ -61,74 +61,48 @@ class ComicDetailSheet extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
 
-              // Thumbnail + Publication Info
-              if (entry.thumbnailHref != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          baseUri.resolve(entry.thumbnailHref!).toString(),
-                          width: 100,
-                          height: 150,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              width: 100,
-                              height: 150,
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.broken_image),
-                            );
-                          },
+              // Publication Info
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (meta.series != null) ...[
+                      Text(
+                        meta.series!,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (meta.series != null) ...[
-                              Text(
-                                meta.series!,
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                            ],
-                            if (meta.number != null) ...[
-                              Text(
-                                'Issue #${meta.number}',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                              const SizedBox(height: 4),
-                            ],
-                            if (meta.year != null) ...[
-                              Text(
-                                'Published: ${meta.year}${meta.month != null ? '/${meta.month}' : ''}',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                              const SizedBox(height: 4),
-                            ],
-                            if (meta.publisher != null) ...[
-                              Text(
-                                'Publisher: ${meta.publisher}',
-                                style: Theme.of(context).textTheme.bodySmall,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ],
-                        ),
+                      const SizedBox(height: 4),
+                    ],
+                    if (meta.number != null) ...[
+                      Text(
+                        'Issue #${meta.number}',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                    if (meta.year != null) ...[
+                      Text(
+                        'Published: ${meta.year}${meta.month != null ? '/${meta.month}' : ''}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                    if (meta.publisher != null) ...[
+                      Text(
+                        'Publisher: ${meta.publisher}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                  ),
+                  ],
                 ),
+              ),
 
               // Summary
               if (entry.summary?.isNotEmpty == true) ...[
