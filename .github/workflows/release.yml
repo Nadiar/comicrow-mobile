@@ -11,6 +11,11 @@ on:
         required: false
         default: internal
         type: string
+      release_status:
+        description: Google Play release status (completed, draft, halted, inProgress)
+        required: false
+        default: completed
+        type: string
 
 permissions:
   contents: write
@@ -77,7 +82,7 @@ jobs:
           packageName: com.nadiar.comicrow
           releaseFiles: build/app/outputs/bundle/release/app-release.aab
           track: ${{ inputs.play_track || 'internal' }}
-          status: completed
+          status: ${{ inputs.release_status || 'completed' }}
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')

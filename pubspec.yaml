@@ -37,7 +37,7 @@ dependencies:
   go_router: ^17.1.0
   dio: ^5.9.2
   drift: ^2.31.0
-  sqlite3_flutter_libs: ^0.6.0+eol
+  sqlite3_flutter_libs: ^0.5.42
   cached_network_image: ^3.4.1
   xml: ^6.6.1
   archive: ^4.0.9

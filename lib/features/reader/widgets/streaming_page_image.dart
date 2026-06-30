@@ -98,17 +98,32 @@ class _StreamingPageImageState extends ConsumerState<StreamingPageImage> {
       return cached;
     }
 
-    final bytes = await ref.read(comicDownloaderProvider).downloadBytesWithHeaders(
-      Uri.parse(widget.pageUrl),
-      headers: widget.headers,
-    );
-    if (bytes.isEmpty) {
-      return null;
+    const maxAttempts = 3;
+    final pageUri = Uri.parse(widget.pageUrl);
+
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (!mounted) return null;
+
+      try {
+        final bytes = await ref.read(comicDownloaderProvider).downloadBytesWithHeaders(
+          pageUri,
+          headers: widget.headers,
+        );
+        if (bytes.isNotEmpty) {
+          final pageBytes = Uint8List.fromList(bytes);
+          cache.put(widget.pageUrl, pageBytes);
+          return pageBytes;
+        }
+      } catch (e) {
+        debugPrint('Page download attempt $attempt failed for ${widget.pageUrl}: $e');
+      }
+
+      if (attempt < maxAttempts) {
+        await Future.delayed(Duration(seconds: attempt));
+      }
     }
 
-    final pageBytes = Uint8List.fromList(bytes);
-    cache.put(widget.pageUrl, pageBytes);
-    return pageBytes;
+    return null;
   }
 
   void _markLoaded() {

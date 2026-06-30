@@ -2,6 +2,7 @@ import 'package:comicrow/app.dart';
 import 'package:comicrow/core/storage/database.dart';
 import 'package:comicrow/features/library/providers/library_catalog_provider.dart';
 import 'package:comicrow/features/servers/data/server_repository.dart';
+import 'package:comicrow/features/downloads/data/download_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,6 +33,8 @@ void main() {
           libraryBrowseControllerProvider.overrideWith(
             FakeLibraryBrowseController.new,
           ),
+          activeDownloadsProvider.overrideWith((ref) => Stream.value(<DownloadRecord>[])),
+          completedDownloadsProvider.overrideWith((ref) => Stream.value(<DownloadRecord>[])),
         ],
         child: const ComicRowApp(),
       ),
